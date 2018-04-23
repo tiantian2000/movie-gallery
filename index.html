@@ -148,7 +148,7 @@
         if(/photo_center/.test(cls)) { //如果点击的是居中的则只是翻转及加载详情
 
             //获取每一个电影的详情
-            var url = 'http://api.douban.com/v2/movie/subject/'+fullData[index].id+'?apikey=0b2bdeda43b5688921839c8ecb20399b';
+            var url = 'https://api.douban.com/v2/movie/subject/'+fullData[index].id+'?apikey=0b2bdeda43b5688921839c8ecb20399b';
             $.ajax({
                 type: 'GET',
                 url: url,
