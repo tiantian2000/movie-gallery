@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+<div class="wrap" id="wrap">
+    <!--2.改写视图,为模板字符串 -->
+    <!-- 点击照片的div:this就是元素的本身 -->
+    <div class="photo photo_front photo_center"
+         id="photo_{{index}}" onclick="turn(this)">
+        <!-- 负责翻转-->
+        <div class="photo_wrap">
+            <div class="side side_front">
+                <p class="image">
+                    <img src="./images/logo.jpg" id="logo"/>
+                    <p class="caption" id="caption">电影海报</p>
+                </p>
+            </div>
+            <div class="side side_back">
+                <p class="desc">电影简介</p>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+<script type="text/javascript" src="js/jquery-3.0.0.js"></script>
+<script type="text/javascript">
+    var fullData = [];
+    //把data.js中的data数组取出来
+    $(function() {
+        var url = 'https://api.douban.com/v2/movie/in_theaters?' +
+                'apikey=0b2bdeda43b5688921839c8ecb20399b&city=南京';
+        $.ajax({
+            type: 'GET',
+            url: url,
+            dataType: 'jsonp',//可以跨域请求
+            success: function (data) {//请求成功触发的回调函数
+
+                //3.把所有的数据输出到页面中
+                //数据加载完毕,设置的海报的图片和标题为代换的变量标记
+                $("#logo").attr('src','{{img}}');
+                $("#caption").html('{{caption}}');
+                fullData = data.subjects;
+                addPhotos(data.subjects);
+            }
+        })
+    });
+
+
+        function addPhotos(data){
+            var html = [];
+            var template = document.getElementById("wrap").innerHTML;
+            console.log(template);
+            //遍历数组,把每一个对象写入到wrap的div中
+            data.forEach(function(item,index){
+                //把摸板中的标志位,替换成需要显示的数据
+                var _html = template.replace('{{index}}',index)
+                        .replace('{{img}}',item.images.small)
+                        .replace('{{caption}}',item.title)
+                        //.replace('{{desc}}',item.detail);
+                //把需要显示的最终的每一个海报加入数组
+                html.push(_html);
+            })
+            //把最终需要显示的所有海报内容写入到wrap的div中
+            document.getElementById("wrap").innerHTML = html.join('');
+            //console.log(Math.floor(Math.random()*html.length))
+            //随机生成一个随机数的索引做为中心显示
+            rsort(Math.floor(Math.random()*html.length));
+        }
+
+        //4.排序海报,给指定索引的海报居中
+        function rsort(n){
+            //给指定索引的海报居中
+            //根据class名字取元素
+            var photo_center = document.getElementById('photo_'+n);
+            console.log('添加之前', photo_center)
+            if(!/photo_center/.test(photo_center.className)){
+                //如果没有居中样式则给这个元素添加photo_center样式
+                photo_center.className += ' photo_center';
+                console.log('添加之后', photo_center)
+            }
+
+            //给所有元素设置旋转及放大倍数1.3
+            rotate();
+
+            //左分区的取值是海报的左边缘，右分区的取值是海报的右边缘
+            //根据className找到所有的海报
+            var _photo = document.getElementsByClassName('photo');
+            var photos = [];
+            //把所有的海报的div放入数组中
+            for(var i=0;i<_photo.length;i++) {
+                photos.push(_photo[i]);
+            }
+            console.log(photos);
+            //把中心显示的那个元素删除
+            photos.splice(n,1);
+            //把数组分成两半
+            //把数组取一半做为左分区显示
+            var photos_left = photos.splice(0,Math.ceil(photos.length/2));
+            //余下的就是另一半做为右分区显示
+            var photos_right = photos;
+            //取wrap的宽和高
+            var wrap = document.getElementById("wrap");
+            var wrapW = wrap.clientWidth;
+            var wrapH = wrap.clientHeight;
+            console.log(wrapW,wrapH);
+            //取每一个海报的宽和高
+            var photoW = _photo[0].clientWidth;
+            var photoH = _photo[0].clientHeight;
+            console.log(photoW,photoH);
+
+            photos_left.forEach(function(item){
+                //遍历每一个元素,设置它的样式距离上边和左边的距离
+                item.style.left = random(0,wrapW/2-photoW) + 'px';
+                item.style.top =  random(0,wrapH) + 'px';
+                //设置旋转样式
+                item.style['transform'] = 'rotate(' + random(-150,150) + 'deg) scale(1)';
+            })
+
+            photos_right.forEach(function(item){
+                //遍历每一个元素,设置它的样式距离上边和左边的距离
+                item.style.left = random(wrapW/2+photoW,wrapW) + 'px';
+                item.style.top =  random(0,wrapH) + 'px';
+                item.style['transform'] = 'rotate(' + random(-150,150) + 'deg) scale(1)';
+            })
+
+            clearCenter(n);
+        }
+
+        //生成取值范围里的随机数(min - 期望的最小值,max - 期望的最大值)
+        function random(min,max){
+            //console.log(min,max);
+            var result =  Math.floor(Math.random()*(max-min+1)+min);
+            //console.log(result);
+            return result;
+        }
+
+    //翻面控制
+    function turn(elem){
+        //取元素中的样式
+        var cls = elem.className;
+        //取点击的元素的索引
+        var index = elem.id.split('_')[1];
+        console.log(index);
+        if(/photo_center/.test(cls)) { //如果点击的是居中的则只是翻转及加载详情
+
+            //获取每一个电影的详情
+            var url = 'http://api.douban.com/v2/movie/subject/'+fullData[index].id+'?apikey=0b2bdeda43b5688921839c8ecb20399b';
+            $.ajax({
+                type: 'GET',
+                url: url,
+                dataType: 'jsonp',
+                success: function (data) {
+                    console.log(data);
+                    var per =
+                            '<span class="title">'+data.genres.join(',') + '</span><br/> ' +
+                            '<span class="collect">'+data.collect_count+ '评价</span>' + '<em>'+ data.rating.average +'分</em><br/>' +
+                            '<span class="summary">'+data.summary+'</span>';
+                    //把每一个电影添加到需要显示的翻面的div中
+                    var str = $(elem).html();
+                    console.log(str);
+                    str = str.replace('电影简介',per);
+                    $(elem).html(str);
+                }
+            });
+
+            //使用正则表达式来判断样式中是否有photo_front
+            if(/photo_front/.test(cls)){
+                //把photo_front替换成photo_back
+                cls = cls.replace(/photo_front/,'photo_back');
+            }else{
+                cls = cls.replace(/photo_back/,'photo_front');
+            }
+            return elem.className = cls;
+        }else{//如果点击的不是居中的,添加居中样式,其余样式重置,重新排序
+            clear();
+            cls += ' photo_center '
+            rsort(index);
+        }
+    }
+
+    //清除所有元素样式
+    function clear(){
+        var _photo=document.getElementsByClassName('photo');
+        for(var s=0;s<_photo.length;s++){
+            _photo[s].className = _photo[s].className.replace(/photo_center/,' ');
+            _photo[s].className = _photo[s].className.replace(/photo_front/,' ');
+            _photo[s].className = _photo[s].className.replace(/photo_back/,' ');
+            _photo[s].className += ' photo_front ';
+            _photo[s].style.left = '';
+            _photo[s].style.top = '';
+            _photo[s].style['transform'] = 'rotate(0deg)';
+        }
+    }
+
+    function clearCenter(n){
+        var _photo=document.getElementsByClassName('photo');
+        for(var s=0;s<_photo.length;s++){
+            if(s != n){
+                _photo[s].className = _photo[s].className.replace(/photo_center/,' ');
+            }
+        }
+        console.log(_photo);
+    }
+
+    function rotate(){
+        var _photo=document.getElementsByClassName('photo');
+        for(var s=0;s<_photo.length;s++){
+            _photo[s].style['transform'] = 'rotate(360deg) scale(1.3)';
+        }
+        console.log(_photo);
+    }
+
+</script>
+</html>
